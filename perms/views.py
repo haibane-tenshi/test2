@@ -72,13 +72,18 @@ def login(request: HttpRequest) -> HttpResponse:
             name = request.POST["login"]
             password = request.POST["password"]
 
+            reject = HttpResponseForbidden("Invalid username and/or password")
+
             try:
                 user = User.objects.get(name=name)
             except User.DoesNotExist:
-                return HttpResponseForbidden("Invalid username and/or password")
+                return reject
+
+            if not user.is_active:
+                return reject
 
             if not context.verify(password, user.passhash):
-                return HttpResponseForbidden("Invalid username and/or password")
+                return reject
 
             # Check existing sessions, some of them may have expired.
             for session in user.session_set.all():
@@ -113,6 +118,21 @@ def logout(request: HttpRequest) -> HttpResponse:
         return HttpResponse(status=400)
 
     request.session.delete()
+
+    response = HttpResponseRedirect(reverse("login"))
+    response.set_cookie("session", "", max_age=0)
+    return response
+
+
+@require_session
+def remove(request: HttpRequest) -> HttpResponse:
+    if request.method != "POST":
+        return HttpResponse(status=400)
+
+    for session in request.user.session_set.all():
+        session.delete()
+    request.user.is_active = False
+    request.user.save()
 
     response = HttpResponseRedirect(reverse("login"))
     response.set_cookie("session", "", max_age=0)
