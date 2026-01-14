@@ -31,7 +31,8 @@ def require_session(fun):
         except Session.DoesNotExist:
             return reject
 
-        if session.expires_at < datetime.now(timezone.utc):
+        if not session.is_active():
+            session.delete()
             return reject
         else:
             request.user = session.user
@@ -79,14 +80,22 @@ def login(request: HttpRequest) -> HttpResponse:
             if not context.verify(password, user.passhash):
                 return HttpResponseForbidden("Invalid username and/or password")
 
-            # Currently we always create a new session
-            # It might be correct to join an existing session instead (if there is one)
+            # Check existing sessions, some of them may have expired.
+            for session in user.session_set.all():
+                if not session.is_active():
+                    session.delete()
 
             # in seconds
             max_age = 60 * 60
-            id = uuid.uuid7()
-            expires_at = datetime.now(timezone.utc) + timedelta(seconds=max_age)
-            Session.objects.create(uuid=id, user=user, expires_at=expires_at)
+
+            # If there is one active, join it instead of creating a new one.
+            session = user.session_set.first()
+            if session is None:
+                id = uuid.uuid7()
+                expires_at = datetime.now(timezone.utc) + timedelta(seconds=max_age)
+                Session.objects.create(uuid=id, user=user, expires_at=expires_at)
+            else:
+                id = session.uuid
 
             response = HttpResponseRedirect(reverse("status"))
             response.set_cookie(

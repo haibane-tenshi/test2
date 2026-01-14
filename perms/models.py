@@ -1,4 +1,5 @@
 from django.db import models
+from datetime import datetime, timezone
 
 # Create your models here.
 
@@ -19,3 +20,6 @@ class Session(models.Model):
     uuid = models.UUIDField(unique=True)
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     expires_at = models.DateTimeField()
+
+    def is_active(self):
+        return self.expires_at > datetime.now(timezone.utc)
