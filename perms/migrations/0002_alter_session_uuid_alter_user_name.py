@@ -4,20 +4,19 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('perms', '0001_initial'),
+        ("perms", "0001_initial"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='session',
-            name='uuid',
+            model_name="session",
+            name="uuid",
             field=models.UUIDField(unique=True),
         ),
         migrations.AlterField(
-            model_name='user',
-            name='name',
+            model_name="user",
+            name="name",
             field=models.CharField(max_length=30, unique=True),
         ),
     ]
