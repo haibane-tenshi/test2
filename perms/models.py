@@ -4,7 +4,7 @@ from django.db import models
 
 
 class User(models.Model):
-    name = models.CharField(max_length=30)
+    name = models.CharField(max_length=30, unique=True)
     passhash = models.CharField()
     is_active = models.BooleanField()
     is_admin = models.BooleanField()
@@ -16,6 +16,6 @@ class UserPermission(models.Model):
 
 
 class Session(models.Model):
-    uuid = models.UUIDField()
+    uuid = models.UUIDField(unique=True)
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     expires_at = models.DateTimeField()
