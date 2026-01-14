@@ -1,8 +1,8 @@
 Username: {{ request.user.name }} <br>
-Is administrator: {% if request.user.id_admin %} true {% else %} false {% endif %}<br>
+Is administrator: {% if request.user.is_admin %} true {% else %} false {% endif %}<br>
 Accessible urls: <br>
 {% for perm in request.user.userpermission_set.all %}
-    {{perm.url}}<br>
+    <a href={{perm.url}}>{{perm.url}}</a><br>
 {% endfor %}
 <br>
 <form action="{% url 'logout' %}" method="post">
