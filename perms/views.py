@@ -15,19 +15,24 @@ import uuid
 # Create your views here.
 
 
-def restricted(fun):
+def require_session(fun):
     def wrapper(*args, **kwargs):
         request: HttpRequest = args[0]
         session_str = request.COOKIES.get("session")
 
+        reject = HttpResponse("Not authorized. Consider logging in.", status=401)
+
         if session_str is None:
-            return HttpResponse("Not authorized. Consider logging in.", status=401)
+            return reject
 
         id = uuid.UUID(session_str)
-        session = Session.objects.filter(uuid=id).get()
+        try:
+            session = Session.objects.filter(uuid=id).get()
+        except Session.DoesNotExist:
+            return reject
 
-        if session is None or session.expires_at < datetime.now(timezone.utc):
-            return HttpResponse("Not authorized. Consider logging in.", status=401)
+        if session.expires_at < datetime.now(timezone.utc):
+            return reject
         else:
             request.user = session.user
             request.session = session
@@ -36,11 +41,24 @@ def restricted(fun):
     return wrapper
 
 
+def restricted(fun):
+    def wrapper(*args):
+        request: HttpRequest = args[0]
+        if request.user.is_admin or request.path in [
+            perm.url for perm in request.user.userpermission_set.all()
+        ]:
+            return fun(*args)
+        else:
+            return HttpResponse("Not authorized.", status=403)
+
+    return wrapper
+
+
 def index(request: HttpRequest) -> HttpResponse:
     return HttpResponseRedirect("/login")
 
 
-@restricted
+@require_session
 def status(request: HttpRequest) -> HttpResponse:
     return render(request, "status.html")
 
@@ -80,7 +98,7 @@ def login(request: HttpRequest) -> HttpResponse:
             pass
 
 
-@restricted
+@require_session
 def logout(request: HttpRequest) -> HttpResponse:
     if request.method != "POST":
         return HttpResponse(status=400)
@@ -90,3 +108,21 @@ def logout(request: HttpRequest) -> HttpResponse:
     response = HttpResponseRedirect(reverse("login"))
     response.set_cookie("session", "", max_age=0)
     return response
+
+
+@require_session
+@restricted
+def test_a(request: HttpRequest) -> HttpResponse:
+    return HttpResponse("This page contains letter A")
+
+
+@require_session
+@restricted
+def test_b(request: HttpRequest) -> HttpResponse:
+    return HttpResponse("This page contains letter B")
+
+
+@require_session
+@restricted
+def test_c(request: HttpRequest) -> HttpResponse:
+    return HttpResponse("This page contains letter C")
