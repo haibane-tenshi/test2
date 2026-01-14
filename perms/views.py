@@ -6,12 +6,42 @@ from django.http import (
     HttpResponseForbidden,
 )
 from django.urls import reverse
+from .secure import context
+from .models import User, Session
+from datetime import datetime, timedelta, timezone
+import uuid
+
 
 # Create your views here.
 
 
+def restricted(fun):
+    def wrapper(*args, **kwargs):
+        request: HttpRequest = args[0]
+        session_str = request.COOKIES["session"]
+
+        if session_str is None:
+            return HttpResponse("Not authorized. Consider logging in.", status=401)
+
+        id = uuid.UUID(session_str)
+        session = Session.objects.filter(uuid=id).get()
+
+        if session is None or session.expires_at < datetime.now(timezone.utc):
+            return HttpResponse("Not authorized. Consider logging in.", status=401)
+        else:
+            request.user = session.user
+            return fun(*args)
+
+    return wrapper
+
+
 def index(request: HttpRequest) -> HttpResponse:
     return HttpResponseRedirect("/login")
+
+
+@restricted
+def status(request: HttpRequest) -> HttpResponse:
+    return render(request, "status.html")
 
 
 def login(request: HttpRequest) -> HttpResponse:
@@ -19,11 +49,6 @@ def login(request: HttpRequest) -> HttpResponse:
         case "GET":
             return render(request, "login.html")
         case "POST":
-            from .secure import context
-            from .models import User, Session
-            from datetime import datetime, timedelta
-            import uuid
-
             name = request.POST["login"]
             password = request.POST["password"]
 
@@ -40,13 +65,13 @@ def login(request: HttpRequest) -> HttpResponse:
 
             # in seconds
             max_age = 60 * 60
-            uuid = uuid.uuid7()
-            expires_at = datetime.now() + timedelta(seconds=max_age)
-            Session.objects.create(uuid=uuid, user=user, expires_at=expires_at)
+            id = uuid.uuid7()
+            expires_at = datetime.now(timezone.utc) + timedelta(seconds=max_age)
+            Session.objects.create(uuid=id, user=user, expires_at=expires_at)
 
             response = HttpResponseRedirect(reverse("status"))
             response.set_cookie(
-                "session", str(uuid), max_age=max_age, secure=True, httponly=True
+                "session", str(id), max_age=max_age, secure=True, httponly=True
             )
 
             return response
