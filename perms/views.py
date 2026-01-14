@@ -18,7 +18,7 @@ import uuid
 def restricted(fun):
     def wrapper(*args, **kwargs):
         request: HttpRequest = args[0]
-        session_str = request.COOKIES["session"]
+        session_str = request.COOKIES.get("session")
 
         if session_str is None:
             return HttpResponse("Not authorized. Consider logging in.", status=401)
@@ -30,6 +30,7 @@ def restricted(fun):
             return HttpResponse("Not authorized. Consider logging in.", status=401)
         else:
             request.user = session.user
+            request.session = session
             return fun(*args)
 
     return wrapper
@@ -77,3 +78,15 @@ def login(request: HttpRequest) -> HttpResponse:
             return response
         case _:
             pass
+
+
+@restricted
+def logout(request: HttpRequest) -> HttpResponse:
+    if request.method != "POST":
+        return HttpResponse(status=400)
+
+    request.session.delete()
+
+    response = HttpResponseRedirect(reverse("login"))
+    response.set_cookie("session", "", max_age=0)
+    return response
