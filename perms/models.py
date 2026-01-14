@@ -21,5 +21,5 @@ class Session(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     expires_at = models.DateTimeField()
 
-    def is_active(self):
+    def is_active(self) -> bool:
         return self.expires_at > datetime.now(timezone.utc)

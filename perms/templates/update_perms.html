@@ -1,0 +1,9 @@
+<form action="{% url 'update_perms' %}" method="post">
+    Username: <input type="text" name="username"> <br>
+    Url: <input type="text" name="url"> <br>
+    <input type="radio" id="add" name="opkind" value="add" checked>
+    <label for="add">add</label>
+    <input type="radio" id="rem" name="opkind" value="rem">
+    <label for="rem">remove</label><br>
+    <input type="submit" value="submit">
+</form>

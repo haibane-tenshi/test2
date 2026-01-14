@@ -1,5 +1,9 @@
 Username: {{ request.user.name }} <br>
 Is administrator: {% if request.user.is_admin %} true {% else %} false {% endif %}<br>
+{% if request.user.is_admin %} 
+<a href="{% url 'update_perms' %}">Add/remove url access</a>
+<br>
+{% endif %}
 Accessible urls: <br>
 {% for perm in request.user.userpermission_set.all %}
     <a href={{perm.url}}>{{perm.url}}</a><br>

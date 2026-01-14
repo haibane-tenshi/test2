@@ -7,7 +7,7 @@ from django.http import (
 )
 from django.urls import reverse
 from .secure import context
-from .models import User, Session
+from .models import User, Session, UserPermission
 from datetime import datetime, timedelta, timezone
 import uuid
 
@@ -48,6 +48,17 @@ def restricted(fun):
         if request.user.is_admin or request.path in [
             perm.url for perm in request.user.userpermission_set.all()
         ]:
+            return fun(*args)
+        else:
+            return HttpResponse("Not authorized.", status=403)
+
+    return wrapper
+
+
+def restricted_to_admin(fun):
+    def wrapper(*args):
+        request: HttpRequest = args[0]
+        if request.user.is_admin:
             return fun(*args)
         else:
             return HttpResponse("Not authorized.", status=403)
@@ -137,6 +148,36 @@ def remove(request: HttpRequest) -> HttpResponse:
     response = HttpResponseRedirect(reverse("login"))
     response.set_cookie("session", "", max_age=0)
     return response
+
+
+@require_session
+@restricted_to_admin
+def update_perms(request: HttpRequest) -> HttpResponse:
+    match request.method:
+        case "GET":
+            return render(request, "update_perms.html")
+        case "POST":
+            username = request.POST["username"]
+            url = request.POST["url"]
+            opkind = request.POST["opkind"]
+
+            try:
+                user = User.objects.get(name=username)
+            except User.DoesNotExist:
+                return HttpResponse("User does not exist", status=400)
+
+            perms = user.userpermission_set.filter(url=url).all()
+            match opkind:
+                case "add":
+                    if len(perms) == 0:
+                        UserPermission.objects.create(group=user, url=url)
+                case "rem":
+                    for perm in perms:
+                        perm.delete()
+                case _:
+                    pass
+
+            return HttpResponse()
 
 
 @require_session
