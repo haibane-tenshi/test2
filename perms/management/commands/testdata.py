@@ -16,7 +16,7 @@ class Command(BaseCommand):
             is_admin=False,
             is_active=True,
         )
-        alice.userpermission_set.create(url="test/a")
+        alice.userpermission_set.create(url="/test/a")
 
         bob = User.objects.create(
             name="bob",
@@ -24,7 +24,7 @@ class Command(BaseCommand):
             is_admin=False,
             is_active=True,
         )
-        bob.userpermission_set.create(url="test/b")
+        bob.userpermission_set.create(url="/test/b")
 
         charlie = User.objects.create(
             name="charlie",
@@ -32,7 +32,7 @@ class Command(BaseCommand):
             is_admin=False,
             is_active=True,
         )
-        charlie.userpermission_set.create(url="test/b")
+        charlie.userpermission_set.create(url="/test/b")
 
         admin = User.objects.create(
             name="admin",
